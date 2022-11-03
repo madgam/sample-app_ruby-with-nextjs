@@ -1,0 +1,48 @@
+version: '3'
+
+services:
+  db:
+    platform: linux/x86_64
+    image: mysql/mysql-server:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_ROOT_HOST: '%'
+    ports:
+      - '3306:3306'
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+  backend:
+    build:
+      context: be
+    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails s -p 8080 -b '0.0.0.0'"
+    volumes:
+      - ./be:/usr/src/app
+      - ./be/vendor/bundle:/usr/local/bundle
+    ports:
+      - '8080:8080'
+    depends_on:
+      - db
+    stdin_open: true
+    tty: true
+    environment:
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      DB_PORT: 3306
+      DB_HOST: db
+      RAILS_MAX_THREADS: 5
+      RAILS_ENV: development
+
+  frontend:
+    build:
+      context: fe
+    volumes:
+      - ./fe:/usr/src/app
+    ports:
+      - '3000:3000'
+    environment:
+     - WATCHPACK_POLLING=true
+volumes:
+  mysql-data:
+    driver: local
